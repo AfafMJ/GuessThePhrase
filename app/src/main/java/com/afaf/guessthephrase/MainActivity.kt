@@ -1,9 +1,9 @@
 package com.afaf.guessthephrase
-
+import android.content.Context
 import android.content.DialogInterface
+import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -12,7 +12,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlin.random.Random
 
 class MainActivity : AppCompatActivity() {
     private lateinit var clRoot: ConstraintLayout
@@ -21,6 +20,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var messages: ArrayList<String>
     private lateinit var tvPhrase: TextView
     private lateinit var tvLetters: TextView
+    private lateinit var myHighScore: TextView
 
     private val answer = "Fear cuts deeper than swords"
     private val myAnswerDictionary = mutableMapOf<Int, Char>()
@@ -29,9 +29,21 @@ class MainActivity : AppCompatActivity() {
     private var count = 0
     private var guessPhrase = true
 
+    private lateinit var sharedPreferences: SharedPreferences
+
+    private var score = 0
+    private var highScore = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        sharedPreferences = this.getSharedPreferences(
+            getString(R.string.preference_file_key), Context.MODE_PRIVATE)
+        highScore = sharedPreferences.getInt("HighScore", 0)
+
+        myHighScore = findViewById(R.id.tvHighScore)
+        myHighScore.text = "High Score: $highScore"
 
         for(i in answer.indices){
             if(answer[i] == ' '){
@@ -65,6 +77,7 @@ class MainActivity : AppCompatActivity() {
         if(guessPhrase){
             if(msg == answer){
                 disableEntry()
+                updateScore()
                 showAlertDialog("You win!\n\nPlay again?")
             }else{
                 messages.add("Wrong guess: $msg")
@@ -77,7 +90,7 @@ class MainActivity : AppCompatActivity() {
                 guessPhrase = true
                 checkLetters(msg[0])
             }else{
-                Snackbar.make(clRoot, "Please enter only one letter ", Snackbar.LENGTH_LONG).show()
+                Snackbar.make(clRoot, "Please enter one letter only", Snackbar.LENGTH_LONG).show()
             }
         }
 
@@ -114,6 +127,7 @@ class MainActivity : AppCompatActivity() {
         for(i in myAnswerDictionary){myAnswer += myAnswerDictionary[i.key]}
         if(myAnswer==answer){
             disableEntry()
+            updateScore()
             showAlertDialog("You win!\n\nPlay again?")
         }
         if(guessedLetters.isEmpty()){guessedLetters+=guessedLetter}else{guessedLetters+=", "+guessedLetter}
@@ -128,6 +142,7 @@ class MainActivity : AppCompatActivity() {
         updateText()
         rvMessages.scrollToPosition(messages.size - 1)
     }
+
 
     private fun showAlertDialog(title: String) {
         // build alert dialog
@@ -152,5 +167,17 @@ class MainActivity : AppCompatActivity() {
         alert.setTitle("Game Over")
         // show alert dialog
         alert.show()
+    }
+
+    private fun updateScore(){
+        score = 10 - count
+        if(score >= highScore){
+            highScore = score
+            with(sharedPreferences.edit()) {
+                putInt("HighScore", highScore)
+                apply()
+            }
+            Snackbar.make(clRoot, "NEW HIGH SCORE!", Snackbar.LENGTH_LONG).show()
+        }
     }
 }
